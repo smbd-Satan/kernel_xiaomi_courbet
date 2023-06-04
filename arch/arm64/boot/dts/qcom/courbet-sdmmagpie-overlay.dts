@@ -17,17 +17,13 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/qcom,camcc-sdmmagpie.h>
 
-#include "courbet-sdmmagpie.dtsi"
-#include "courbet-nfc-overlay.dtsi"
-#include "courbet-audio-overlay.dtsi"
+#include "xiaomi/courbet/courbet-sdmmagpie.dtsi"
+#include "xiaomi/courbet/courbet-nfc-overlay.dtsi"
+#include "xiaomi/courbet/courbet-audio-overlay.dtsi"
 
 / {
 	model = "COURBET";
 	compatible = "qcom,sdmmagpie-qrd", "qcom,sdmmagpie", "qcom,qrd";
 	qcom,msm-id = <365 0x0>;
 	qcom,board-id = <45 0>;
-};
-
-&dsi_sw43404_amoled_video_display {
-	qcom,dsi-display-active;
 };
