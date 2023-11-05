@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 VERSION = 4
 PATCHLEVEL = 14
-SUBLEVEL = 230
+SUBLEVEL = 240
 EXTRAVERSION =
 NAME = Petit Gorille
 
@@ -813,10 +813,13 @@ KBUILD_CFLAGS += $(call cc-option,-fno-delete-null-pointer-checks,)
 # These warnings generated too much noise in a regular build.
 # Use make W=1 to enable them (see scripts/Makefile.extrawarn)
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
+<<<<<<< HEAD
 
 ifeq ($(ld-name),lld)
 LDFLAGS += -O2
 endif
+=======
+>>>>>>> b612e25a9835e22b2826c0090fd3b0821c3c7aae
 
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
 ifdef CONFIG_FRAME_POINTER
