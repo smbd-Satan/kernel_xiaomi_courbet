@@ -54,11 +54,6 @@ module_param(cpu_freq_idle_big, uint, 0644);
 module_param(input_boost_duration, short, 0644);
 module_param(wake_boost_duration, short, 0644);
 
-#ifdef CONFIG_DYNAMIC_STUNE_BOOST
-static __read_mostly int stune_boost = CONFIG_TA_STUNE_BOOST;
-module_param_named(dynamic_stune_boost, stune_boost, int, 0644);
-#endif
-
 enum {
 	SCREEN_OFF,
 	INPUT_BOOST,
@@ -74,8 +69,6 @@ struct boost_drv {
 	atomic_long_t max_boost_expires;
 	unsigned long state;
 	unsigned long last_input_jiffies;
-	bool stune_active;
-	int stune_slot;
 };
 
 static void input_unboost_worker(struct work_struct *work);
@@ -160,23 +153,6 @@ bool cpu_input_boost_within_input(unsigned long timeout_ms)
 
 	return time_before(jiffies, b->last_input_jiffies +
 			   msecs_to_jiffies(timeout_ms));
-}
-
-static void update_stune_boost(struct boost_drv *b, int value)
-{
-#ifdef CONFIG_DYNAMIC_STUNE_BOOST
-	if (value && !b->stune_active)
-		b->stune_active = !do_stune_boost("top-app", value,
-						  &b->stune_slot);
-#endif
-}
-
-static void clear_stune_boost(struct boost_drv *b)
-{
-#ifdef CONFIG_DYNAMIC_STUNE_BOOST
-	if (b->stune_active)
-		b->stune_active = reset_stune_boost("top-app", b->stune_slot);
-#endif
 }
 
 static void __cpu_input_boost_kick(struct boost_drv *b)
@@ -290,14 +266,12 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long action,
 	/* Unboost when the screen is off */
 	if (test_bit(SCREEN_OFF, &b->state)) {
 		policy->min = get_idle_freq(policy);
-		clear_stune_boost(b);
 		return NOTIFY_OK;
 	}
 
 	/* Boost CPU to max frequency for max boost */
 	if (test_bit(MAX_BOOST, &b->state)) {
 		policy->min = get_max_boost_freq(policy);
-		update_stune_boost(b, stune_boost);
 		return NOTIFY_OK;
 	}
 
@@ -305,13 +279,10 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long action,
 	 * Boost to policy->max if the boost frequency is higher. When
 	 * unboosting, set policy->min to the absolute min freq for the CPU.
 	 */
-	if (test_bit(INPUT_BOOST, &b->state)) {
-	        policy->min = get_input_boost_freq(policy);
-		update_stune_boost(b, stune_boost);
-	} else {
+	if (test_bit(INPUT_BOOST, &b->state))
+		policy->min = get_input_boost_freq(policy);
+	else
 		policy->min = get_min_freq(policy);
-		clear_stune_boost(b);
-	}
 
 	return NOTIFY_OK;
 }
