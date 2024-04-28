@@ -457,7 +457,6 @@ enum feat_id {
 	FEAT_SB_CHECKSUM,
 	FEAT_CASEFOLD,
 	FEAT_COMPRESSION,
-	FEAT_TEST_DUMMY_ENCRYPTION_V2,
 };
 
 static ssize_t f2fs_feature_show(struct f2fs_attr *a,
@@ -478,7 +477,6 @@ static ssize_t f2fs_feature_show(struct f2fs_attr *a,
 	case FEAT_SB_CHECKSUM:
 	case FEAT_CASEFOLD:
 	case FEAT_COMPRESSION:
-	case FEAT_TEST_DUMMY_ENCRYPTION_V2:
 		return sprintf(buf, "supported\n");
 	}
 	return 0;
@@ -558,7 +556,6 @@ F2FS_RW_ATTR(FAULT_INFO_RATE, f2fs_fault_info, inject_rate, inject_rate);
 F2FS_RW_ATTR(FAULT_INFO_TYPE, f2fs_fault_info, inject_type, inject_type);
 #endif
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, data_io_flag, data_io_flag);
-F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, node_io_flag, node_io_flag);
 F2FS_GENERAL_RO_ATTR(dirty_segments);
 F2FS_GENERAL_RO_ATTR(free_segments);
 F2FS_GENERAL_RO_ATTR(lifetime_write_kbytes);
@@ -579,7 +576,6 @@ F2FS_GENERAL_RO_ATTR(avg_vblocks);
 
 #ifdef CONFIG_FS_ENCRYPTION
 F2FS_FEATURE_RO_ATTR(encryption, FEAT_CRYPTO);
-F2FS_FEATURE_RO_ATTR(test_dummy_encryption_v2, FEAT_TEST_DUMMY_ENCRYPTION_V2);
 #endif
 #ifdef CONFIG_BLK_DEV_ZONED
 F2FS_FEATURE_RO_ATTR(block_zoned, FEAT_BLKZONED);
@@ -641,7 +637,6 @@ static struct attribute *f2fs_attrs[] = {
 	ATTR_LIST(inject_type),
 #endif
 	ATTR_LIST(data_io_flag),
-	ATTR_LIST(node_io_flag),
 	ATTR_LIST(dirty_segments),
 	ATTR_LIST(free_segments),
 	ATTR_LIST(unusable),
@@ -666,7 +661,6 @@ static struct attribute *f2fs_attrs[] = {
 static struct attribute *f2fs_feat_attrs[] = {
 #ifdef CONFIG_FS_ENCRYPTION
 	ATTR_LIST(encryption),
-	ATTR_LIST(test_dummy_encryption_v2),
 #endif
 #ifdef CONFIG_BLK_DEV_ZONED
 	ATTR_LIST(block_zoned),
@@ -809,7 +803,6 @@ static int __maybe_unused iostat_info_seq_show(struct seq_file *seq,
 	seq_printf(seq, "time:		%-16llu\n", now);
 
 	/* print app write IOs */
-	seq_puts(seq, "[WRITE]\n");
 	seq_printf(seq, "app buffered:	%-16llu\n",
 				sbi->rw_iostat[APP_BUFFERED_IO]);
 	seq_printf(seq, "app direct:	%-16llu\n",
@@ -836,7 +829,6 @@ static int __maybe_unused iostat_info_seq_show(struct seq_file *seq,
 				sbi->rw_iostat[FS_CP_META_IO]);
 
 	/* print app read IOs */
-	seq_puts(seq, "[READ]\n");
 	seq_printf(seq, "app buffered:	%-16llu\n",
 				sbi->rw_iostat[APP_BUFFERED_READ_IO]);
 	seq_printf(seq, "app direct:	%-16llu\n",
@@ -847,17 +839,12 @@ static int __maybe_unused iostat_info_seq_show(struct seq_file *seq,
 	/* print fs read IOs */
 	seq_printf(seq, "fs data:	%-16llu\n",
 				sbi->rw_iostat[FS_DATA_READ_IO]);
-	seq_printf(seq, "fs gc data:	%-16llu\n",
-				sbi->rw_iostat[FS_GDATA_READ_IO]);
-	seq_printf(seq, "fs compr_data:	%-16llu\n",
-				sbi->rw_iostat[FS_CDATA_READ_IO]);
 	seq_printf(seq, "fs node:	%-16llu\n",
 				sbi->rw_iostat[FS_NODE_READ_IO]);
 	seq_printf(seq, "fs meta:	%-16llu\n",
 				sbi->rw_iostat[FS_META_READ_IO]);
 
 	/* print other IOs */
-	seq_puts(seq, "[OTHER]\n");
 	seq_printf(seq, "fs discard:	%-16llu\n",
 				sbi->rw_iostat[FS_DISCARD]);
 
