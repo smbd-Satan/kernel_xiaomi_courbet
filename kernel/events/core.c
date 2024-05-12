@@ -8643,7 +8643,7 @@ static void perf_event_addr_filters_apply(struct perf_event *event)
 		return;
 
 	if (ifh->nr_file_filters) {
-		mm = get_task_mm(event->ctx->task);
+		mm = get_task_mm(task);
 		if (!mm)
 			goto restart;
 
@@ -8843,7 +8843,7 @@ perf_event_parse_addr_filter(struct perf_event *event, char *fstr,
 				ret = kern_path(filename, LOOKUP_FOLLOW,
 						&filter->path);
 				if (ret)
-					goto fail_free_name;
+					goto fail;
 
 				kfree(filename);
 				filename = NULL;

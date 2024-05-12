@@ -1611,10 +1611,17 @@ static int inode_doinit_with_dentry(struct inode *inode, struct dentry *opt_dent
 		}
 
 		len = INITCONTEXTLEN;
-		context = context_onstack;
+		context = kmalloc(len+1, GFP_NOFS);
+		if (!context) {
+			rc = -ENOMEM;
+			dput(dentry);
+			goto out;
+		}
 		context[len] = '\0';
 		rc = __vfs_getxattr(dentry, inode, XATTR_NAME_SELINUX, context, len);
 		if (rc == -ERANGE) {
+			kfree(context);
+
 			/* Need a larger buffer.  Query for the right size. */
 			rc = __vfs_getxattr(dentry, inode, XATTR_NAME_SELINUX, NULL, 0);
 			if (rc < 0) {
@@ -1637,8 +1644,7 @@ static int inode_doinit_with_dentry(struct inode *inode, struct dentry *opt_dent
 				printk(KERN_WARNING "SELinux: %s:  getxattr returned "
 				       "%d for dev=%s ino=%ld\n", __func__,
 				       -rc, inode->i_sb->s_id, inode->i_ino);
-				if (context != context_onstack)
-					kfree(context);
+				kfree(context);
 				goto out;
 			}
 			/* Map ENODATA to the default file SID */
@@ -1663,15 +1669,13 @@ static int inode_doinit_with_dentry(struct inode *inode, struct dentry *opt_dent
 					       "returned %d for dev=%s ino=%ld\n",
 					       __func__, context, -rc, dev, ino);
 				}
-				if (context != context_onstack)
-					kfree(context);
+				kfree(context);
 				/* Leave with the unlabeled SID */
 				rc = 0;
 				break;
 			}
 		}
-		if (context != context_onstack)
-			kfree(context);
+		kfree(context);
 		break;
 	case SECURITY_FS_USE_TASK:
 		sid = task_sid;
@@ -2199,22 +2203,19 @@ static inline u32 open_file_to_av(struct file *file)
 
 /* Hook functions begin here. */
 
-static int selinux_binder_set_context_mgr(struct task_struct *mgr)
+static int selinux_binder_set_context_mgr(const struct cred *mgr)
 {
-	u32 mysid = current_sid();
-	u32 mgrsid = task_sid(mgr);
-
 	return avc_has_perm(&selinux_state,
-			    mysid, mgrsid, SECCLASS_BINDER,
+			    current_sid(), cred_sid(mgr), SECCLASS_BINDER,
 			    BINDER__SET_CONTEXT_MGR, NULL);
 }
 
-static int selinux_binder_transaction(struct task_struct *from,
-				      struct task_struct *to)
+static int selinux_binder_transaction(const struct cred *from,
+				      const struct cred *to)
 {
 	u32 mysid = current_sid();
-	u32 fromsid = task_sid(from);
-	u32 tosid = task_sid(to);
+	u32 fromsid = cred_sid(from);
+	u32 tosid = cred_sid(to);
 	int rc;
 
 	if (mysid != fromsid) {
@@ -2225,27 +2226,24 @@ static int selinux_binder_transaction(struct task_struct *from,
 			return rc;
 	}
 
-	return avc_has_perm(&selinux_state,
-			    fromsid, tosid, SECCLASS_BINDER, BINDER__CALL,
-			    NULL);
+	return avc_has_perm(&selinux_state, fromsid, tosid,
+			    SECCLASS_BINDER, BINDER__CALL, NULL);
 }
 
-static int selinux_binder_transfer_binder(struct task_struct *from,
-					  struct task_struct *to)
+static int selinux_binder_transfer_binder(const struct cred *from,
+					  const struct cred *to)
 {
-	u32 fromsid = task_sid(from);
-	u32 tosid = task_sid(to);
-
 	return avc_has_perm(&selinux_state,
-			    fromsid, tosid, SECCLASS_BINDER, BINDER__TRANSFER,
+			    cred_sid(from), cred_sid(to),
+			    SECCLASS_BINDER, BINDER__TRANSFER,
 			    NULL);
 }
 
-static int selinux_binder_transfer_file(struct task_struct *from,
-					struct task_struct *to,
+static int selinux_binder_transfer_file(const struct cred *from,
+					const struct cred *to,
 					struct file *file)
 {
-	u32 sid = task_sid(to);
+	u32 sid = cred_sid(to);
 	struct file_security_struct *fsec = file->f_security;
 	struct dentry *dentry = file->f_path.dentry;
 	struct inode_security_struct *isec;
