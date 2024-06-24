@@ -1,3 +1,6 @@
 [submodule "fs/exfat"]
 	path = fs/exfat
 	url = https://github.com/arter97/exfat-linux.git
+[submodule "KernelSU"]
+	path = KernelSU
+	url = https://github.com/tiann/KernelSU/
