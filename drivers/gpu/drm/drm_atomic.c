@@ -30,10 +30,6 @@
 #include <drm/drm_atomic.h>
 #include <drm/drm_mode.h>
 #include <drm/drm_print.h>
-#include <linux/cpu_input_boost.h>
-#include <linux/pm_qos.h>
-#include <linux/devfreq_boost.h>
-#include <linux/battery_saver.h>
 #include <linux/pm_qos.h>
 #include <linux/sync_file.h>
 
@@ -1100,21 +1096,9 @@ drm_atomic_get_connector_state(struct drm_atomic_state *state,
 		struct __drm_connnectors_state *c;
 		int alloc = max(index + 1, config->num_connector);
 
-		if (state->connectors_preallocated) {
-			state->connectors_preallocated = false;
-			c = kmalloc(alloc * sizeof(*state->connectors),
-				    GFP_KERNEL);
-			if (!c)
-				return ERR_PTR(-ENOMEM);
-			memcpy(c, state->connectors,
-			       sizeof(*state->connectors) * state->num_connector);
-		} else {
-			c = krealloc(state->connectors,
-				     alloc * sizeof(*state->connectors),
-				     GFP_KERNEL);
-			if (!c)
-				return ERR_PTR(-ENOMEM);
-		}
+		c = krealloc(state->connectors, alloc * sizeof(*state->connectors), GFP_KERNEL);
+		if (!c)
+			return ERR_PTR(-ENOMEM);
 
 		state->connectors = c;
 		memset(&state->connectors[state->num_connector], 0,
@@ -2264,13 +2248,6 @@ static int __drm_mode_atomic_ioctl(struct drm_device *dev, void *data,
 			(arg->flags & DRM_MODE_PAGE_FLIP_EVENT))
 		return -EINVAL;
 
-        if (is_battery_saver_on()) {
-        if (!(arg->flags & DRM_MODE_ATOMIC_TEST_ONLY) && (time_before(jiffies, last_input_time + msecs_to_jiffies(3000)))) {
-		devfreq_boost_kick(DEVFREQ_MSM_CPUBW);
-		cpu_input_boost_kick();
-	}
-      }
-
 	drm_modeset_acquire_init(&ctx, 0);
 
 	state = drm_atomic_state_alloc(dev);
@@ -2407,8 +2384,7 @@ int drm_mode_atomic_ioctl(struct drm_device *dev, void *data,
 	 */
 	struct pm_qos_request req = {
 		.type = PM_QOS_REQ_AFFINE_CORES,
-		.cpus_affine = ATOMIC_INIT(BIT(raw_smp_processor_id()) |
-					   *cpumask_bits(cpu_perf_mask))
+		.cpus_affine = ATOMIC_INIT(BIT(raw_smp_processor_id()))
 	};
 	int ret;
 
